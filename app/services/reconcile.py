@@ -33,29 +33,41 @@ def run_reconcile(plan_id: int, db_path: str | None = None) -> dict:
         ).fetchone()
         after = int(job["merged_bytes"]) if job else 0
         before_b = int(before["b"])
+        # 对账不再假过：前后字节必须对齐，且必须存在成功的合并任务。
+        passed = bool(job) and before_b == after
+        chip = "绿灯" if passed else "体积不符"
+        if not job:
+            tail = "；无成功合并任务，对账不通过"
+        elif before_b != after:
+            tail = "；体积不一致须人工核对，对账不通过"
+        else:
+            tail = "；对账通过"
         summary = (
             f"计划#{plan_id} {plan['plan_code']}：挂载前 {before_b} 字节 / "
-            f"{before['c']} 文件，合并后记 {after} 字节"
+            f"{before['c']} 文件，合并后记 {after} 字节{tail}"
         )
-        if job and before_b != after:
-            summary += "；体积不一致须人工核对"
         cur = conn.execute(
             "INSERT INTO volume_reports(plan_id, before_bytes, after_bytes, file_count, summary) "
             "VALUES (?,?,?,?,?)",
             (plan_id, before_b, after, int(before["c"]), summary),
         )
-        return dict(
+        report = dict(
             conn.execute(
                 "SELECT * FROM volume_reports WHERE id=?", (cur.lastrowid,)
             ).fetchone()
         )
+        report["passed"] = passed
+        report["chip"] = chip
+        return report
 
 
 def list_reports_with_cross(db_path: str | None = None) -> list[dict]:
     items = list_reports(db_path)
-    from app.services.cross_summary import summarize
-    cross = summarize(db_path=db_path)
+    from app.services.cross_summary import current_chip
+    cross = current_chip(db_path)
     for it in items:
-        it["cross_chip"] = cross.get("chip", "绿灯")
+        it["cross_chip"] = cross["chip"]
+        it["cross_aligned"] = cross["aligned"]
+        it["cross_missing_tables"] = cross.get("missing_tables", [])
     return items
 

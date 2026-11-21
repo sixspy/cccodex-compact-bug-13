@@ -9,7 +9,11 @@ from app.handlers.api_plans import (
     ApiPlanPublish,
     ApiPlans,
 )
-from app.handlers.api_reconcile import ApiReconcileReports, ApiCrossSummary
+from app.handlers.api_reconcile import (
+    ApiCrossChip,
+    ApiCrossSummary,
+    ApiReconcileReports,
+)
 from app.handlers.api_rewrite import ApiRewriteJobs, ApiRewriteStart
 from app.handlers.api_settings import ApiSettings
 from app.handlers.api_cross_skip import (
@@ -51,6 +55,7 @@ def make_app() -> tornado.web.Application:
             (r"/api/rewrite/plans/([0-9]+)/start", ApiRewriteStart),
             (r"/api/reconcile/reports", ApiReconcileReports),
             (r"/api/reconcile/cross-summary", ApiCrossSummary),
+            (r"/api/reconcile/cross-chip", ApiCrossChip),
             (r"/api/settings", ApiSettings),
             (r"/api/cross_skip/dash", ApiCrossSkipDash),
             (r"/api/cross_skip/note", ApiCrossSkipNote),

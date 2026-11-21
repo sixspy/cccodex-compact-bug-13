@@ -1,7 +1,8 @@
-"""跨表漏计旁路账：写入不回正主路径。"""
+"""跨表漏计旁路账：只保留事件笔记；灯色与真相统一取独立快照表。"""
 from __future__ import annotations
 
 from app.db import get_db
+from app.services import cross_summary
 from app.services.cross_skip_surface import panel_chip, record_event, snapshot, truth_flag
 
 _SLUG = "cross_skip"
@@ -30,15 +31,10 @@ def ledger_rows(db_path: str | None = None) -> list[dict]:
             "SELECT key, value FROM meta WHERE key LIKE ? ORDER BY key",
             (f"{_SLUG}_ledger_%",),
         ).fetchall()
+        chip = panel_chip(db_path)
         out = []
         for r in rows:
-            out.append(
-                {
-                    "key": r["key"],
-                    "value": r["value"],
-                    "chip": panel_chip(db_path),
-                }
-            )
+            out.append({"key": r["key"], "value": r["value"], "chip": chip})
         return out
 
 
@@ -51,5 +47,8 @@ def dashboard(db_path: str | None = None) -> dict:
         "rows": ledger_rows(db_path),
         "ok_chip": _OK,
         "bad_chip": "漏表汇总",
+        # 展示面与真相同源后，假绿不再可能出现。
         "fake_green": snap["panel_chip"] == _OK and snap["truth"] != _OK,
+        "aligned": snap["aligned"],
+        "missing_tables": snap.get("missing_tables", []),
     }

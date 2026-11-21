@@ -29,6 +29,10 @@ def register_file(
         raise ServiceError("路径与表名不能为空")
     if size_bytes <= 0:
         raise ServiceError("体积必须大于 0")
+    # 落库闸门：已有快照时，登记后必须仍与各表字节对得齐、无漏表，否则挡落库。
+    from app.services.cross_summary import latest_snapshot
+
+    guard = latest_snapshot(db_path)
     with get_db(db_path) as conn:
         try:
             cur = conn.execute(
@@ -38,6 +42,21 @@ def register_file(
             )
         except Exception as exc:
             raise ServiceError(f"登记失败：路径可能重复（{exc})") from exc
+        if guard is not None:
+            live_rows = conn.execute(
+                "SELECT DISTINCT table_name FROM lake_files"
+            ).fetchall()
+            live = {r["table_name"] for r in live_rows}
+            snap = {d["table"] for d in guard["tables"]}
+            missing = sorted(live - snap)
+            # 只挡漏表：登记引入了快照未纳入的表。已纳入表的字节漂移不挡，
+            # 由快照读时再校验标红，等下一次补洞对齐。
+            if missing:
+                conn.rollback()
+                names = "、".join(missing)
+                raise ServiceError(
+                    f"登记被挡：存在未纳入汇总的表（{names}），请先生成汇总补洞"
+                )
         row = conn.execute(
             "SELECT * FROM lake_files WHERE id=?", (cur.lastrowid,)
         ).fetchone()

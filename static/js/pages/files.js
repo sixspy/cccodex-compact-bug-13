@@ -1,7 +1,16 @@
 import { api } from '../api.js';
 
+function chipTag(chip) {
+  const bad = chip !== '绿灯';
+  return `<span class="tag ${bad ? 'bad' : 'ok'}">${chip}</span>`;
+}
+
 export async function renderFiles(view, setMsg) {
-  const j = await api('/api/files');
+  const [j, cross] = await Promise.all([
+    api('/api/files'),
+    api('/api/reconcile/cross-chip'),
+  ]);
+  const missing = cross.missing_tables || [];
   view.innerHTML = `
     <section class="card">
       <h2>小文件清单</h2>
@@ -11,7 +20,10 @@ export async function renderFiles(view, setMsg) {
         <label>表名<input id="table" value="dw_orders" /></label>
         <label>字节<input id="size" type="number" value="250000" /></label>
         <button class="primary" id="reg" type="button">登记碎文件</button>
+        ${chipTag(cross.chip)}
       </div>
+      ${missing.length ? `<p class="err">未纳入表：${missing.join('、')}，登记与合并将被挡</p>`
+        : (cross.has_snapshot ? '<p class="muted">汇总与各表字节已对齐</p>' : '<p class="err">尚无汇总快照，当前不得亮绿</p>')}
     </section>
     <section class="wall" style="margin-top:1rem">
       ${(j.stats || []).map(s => `<article class="card"><h3>${s.table_name}</h3>
@@ -21,7 +33,7 @@ export async function renderFiles(view, setMsg) {
     <section class="wall" style="margin-top:1rem">
       ${(j.items || []).map(f => `<article class="card">
         <h3>${f.path}</h3>
-        <span class="tag">${f.status}</span> <span class="tag">绿灯</span>
+        <span class="tag">${f.status}</span> ${chipTag(cross.chip)}
         <p class="muted">${f.table_name} · ${f.size_bytes} 字节</p>
         <button data-void="${f.id}" type="button" ${f.status==='已合并'?'disabled':''}>作废</button>
       </article>`).join('') || '<p class="muted">暂无文件</p>'}

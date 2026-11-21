@@ -62,6 +62,24 @@ CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS cross_summary_snapshot (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  total_bytes INTEGER NOT NULL,
+  included_count INTEGER NOT NULL,
+  requested_count INTEGER NOT NULL,
+  missing_tables TEXT NOT NULL,
+  chip TEXT NOT NULL CHECK (chip IN ('绿灯','漏表汇总')),
+  aligned INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS cross_summary_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES cross_summary_snapshot(id),
+  table_name TEXT NOT NULL,
+  bytes INTEGER NOT NULL
+);
 """
 
 

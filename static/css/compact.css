@@ -26,6 +26,8 @@ main { padding:1.2rem 1.4rem 2rem; }
 .err { color:#ff8f8f; }
 .wall { display:grid; gap:.8rem; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .tag { display:inline-block; padding:.15rem .45rem; border-radius:999px; background:#243049; font-size:.8rem; }
+.tag.ok { background:rgba(61,207,154,.18); color:var(--ok); }
+.tag.bad { background:rgba(255,143,143,.16); color:#ff8f8f; }
 label { display:grid; gap:.3rem; font-size:.9rem; color:var(--muted); }
 input, select { width:100%; padding:.5rem .6rem; border-radius:8px; border:1px solid var(--line); background:#0f1522; color:var(--text); }
 h1,h2,h3 { margin:.2rem 0 .6rem; }

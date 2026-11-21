@@ -15,6 +15,13 @@ def list_jobs(db_path: str | None = None) -> list[dict]:
 
 
 def start_rewrite(plan_id: int, db_path: str | None = None) -> dict:
+    # 合并队列闸门：存在漏表/漂移的红快照时不得入队，先补洞生成绿快照。
+    from app.services.cross_summary import current_chip
+
+    chip = current_chip(db_path)
+    if chip["has_snapshot"] and not chip["aligned"]:
+        names = "、".join(chip.get("missing_tables", []) + chip.get("drift_tables", []))
+        raise ServiceError(f"合并被挡：跨表汇总漏表/漂移（{names or '未对齐'}），请先补洞")
     with get_db(db_path) as conn:
         plan = conn.execute(
             "SELECT * FROM compact_plans WHERE id=?", (plan_id,)
